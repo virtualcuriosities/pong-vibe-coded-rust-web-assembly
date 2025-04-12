@@ -6,6 +6,7 @@ use web_sys::HtmlElement;
 use web_sys::{window, Element, MouseEvent};
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::u128::MIN;
 
 mod ball;
 
@@ -119,7 +120,37 @@ pub fn add_ball_div() {
             x: ball_speed.x * DELTA,
             y: ball_speed.y * DELTA
         };
+
+        // compute the right pad enemy AI
+        const AI_SPEED: f32 = 500.0;
+
+        let pad_center = pong.right_pad.rect.top_left.y + pong.right_pad.rect.size.y / 2.0;
+        let ball_center = pong.ball.rect.top_left.y + pong.ball.rect.size.y / 2.0;
         
+        if pad_center < ball_center {
+            pong.right_pad.rect.top_left.y += f32::min(AI_SPEED * DELTA, ball_center - pad_center);
+        } else {
+            pong.right_pad.rect.top_left.y -= f32::min(AI_SPEED * DELTA, pad_center - ball_center);
+        }
+        
+        // clamp the right pad position to the field
+        if pong.right_pad.rect.top_left.y < pong.field.top_left.y {
+            pong.right_pad.rect.top_left.y = pong.field.top_left.y;
+        }
+        
+        if pong.right_pad.rect.top_left.y > pong.field.top_left.y + pong.field.size.y - pong.right_pad.rect.size.y {
+            pong.right_pad.rect.top_left.y = pong.field.top_left.y + pong.field.size.y - pong.right_pad.rect.size.y;
+        }
+
+        set_position_and_size(
+            &right_pad_div,
+            pong.right_pad.rect.top_left.x,
+            pong.right_pad.rect.top_left.y,
+            pong.right_pad.rect.size.x,
+            pong.right_pad.rect.size.y,
+        );
+
+        // perform collision check
         if pong.ball.speed.y < 0.0 {
             if pong.ball.rect.top_left.y < 0.0{
                 pong.ball.rect.top_left.y = 0.0;
@@ -166,6 +197,7 @@ pub fn add_ball_div() {
             pong.ball.rect.size.x,
             pong.ball.rect.size.y,
         );
+
     }) as Box<dyn Fn()>);
     window
     .set_interval_with_callback_and_timeout_and_arguments_0(
