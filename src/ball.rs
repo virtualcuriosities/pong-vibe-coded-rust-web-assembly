@@ -14,15 +14,19 @@ impl AddAssign for Point {
     }
 }
 
+#[derive(Clone)] // Derive the Clone trait for Point
 pub struct Rect {
     pub top_left: Point,
     pub size: Point,
 }
 
+#[derive(Clone)] // Derive the Clone trait for Point
 pub struct Ball {
     pub rect: Rect,
     pub speed: Point,
 }
+
+#[derive(Clone)] // Derive the Clone trait for Point
 
 pub struct Pad {
     pub rect: Rect,

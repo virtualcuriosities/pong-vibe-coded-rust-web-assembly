@@ -1,7 +1,11 @@
 // This file contains the Rust code that will be compiled to WebAssembly. It exports functions that can be called from JavaScript.
 
 use wasm_bindgen::prelude::*;
-use web_sys::{window, Document, Element};
+use wasm_bindgen::JsCast;
+use web_sys::HtmlElement;
+use web_sys::{window, Element, MouseEvent};
+use std::rc::Rc;
+use std::cell::RefCell;
 
 mod ball;
 
@@ -24,22 +28,18 @@ pub fn add_ball_div() {
     let document = window.document().expect("should have a document");
     let body = document.body().expect("should have a body");
 
-    let pong = Pong::new(0.0, 0.0, 640.0, 480.0);
-    let ball = pong.ball;
-    let left_pad = pong.left_pad;
-    let right_pad = pong.right_pad;
-    let field = pong.field;
+    let pong = Rc::new(RefCell::new(Pong::new(0.0, 0.0, 640.0, 480.0)));
 
     // Create field div
-    let field_div = document.create_element("div").expect("should create a div");
+    let field_div = document.create_element("div").expect("should create a div").dyn_into::<HtmlElement>().expect("should cast to HtmlElement");
     field_div.set_class_name("field");
     body.append_child(&field_div).expect("should append the div");
     set_position_and_size(
         &field_div,
-        field.top_left.x,
-        field.top_left.y,
-        field.size.x,
-        field.size.y,
+        pong.borrow().field.top_left.x,
+        pong.borrow().field.top_left.y,
+        pong.borrow().field.size.x,
+        pong.borrow().field.size.y,
     );
 
     // Create ball div
@@ -48,10 +48,10 @@ pub fn add_ball_div() {
     field_div.append_child(&ball_div).expect("should append the div");
     set_position_and_size(
         &ball_div,
-        ball.rect.top_left.x,
-        ball.rect.top_left.y,
-        ball.rect.size.x,
-        ball.rect.size.y,
+        pong.borrow().ball.rect.top_left.x,
+        pong.borrow().ball.rect.top_left.y,
+        pong.borrow().ball.rect.size.x,
+        pong.borrow().ball.rect.size.y,
     );
 
     // Create left pad div
@@ -60,10 +60,10 @@ pub fn add_ball_div() {
     field_div.append_child(&left_pad_div).expect("should append the div");
     set_position_and_size(
         &left_pad_div,
-        left_pad.rect.top_left.x,
-        left_pad.rect.top_left.y,
-        left_pad.rect.size.x,
-        left_pad.rect.size.y,
+        pong.borrow().left_pad.rect.top_left.x,
+        pong.borrow().left_pad.rect.top_left.y,
+        pong.borrow().left_pad.rect.size.x,
+        pong.borrow().left_pad.rect.size.y,
     );
 
     // Create right pad div
@@ -72,11 +72,42 @@ pub fn add_ball_div() {
     field_div.append_child(&right_pad_div).expect("should append the div");
     set_position_and_size(
         &right_pad_div,
-        right_pad.rect.top_left.x,
-        right_pad.rect.top_left.y,
-        right_pad.rect.size.x,
-        right_pad.rect.size.y,
+        pong.borrow().right_pad.rect.top_left.x,
+        pong.borrow().right_pad.rect.top_left.y,
+        pong.borrow().right_pad.rect.size.x,
+        pong.borrow().right_pad.rect.size.y,
     );
+
+    // Add mousemove event listener to update left pad position
+    let pong_clone = Rc::clone(&pong);
+    let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
+        let mouse_y = event.client_y() as f32 - field_div.offset_top() as f32;
+        let mut pong = pong_clone.borrow_mut();
+        pong.left_pad.rect.top_left.y = mouse_y - pong.left_pad.rect.size.y / 2.0;
+        
+        // clamp the left pad position to the field
+        if pong.left_pad.rect.top_left.y  < pong.field.top_left.y{
+            pong.left_pad.rect.top_left.y = pong.field.top_left.y;
+        }
+
+        if pong.left_pad.rect.top_left.y  > pong.field.top_left.y + pong.field.size.y - pong.left_pad.rect.size.y {
+            pong.left_pad.rect.top_left.y = pong.field.top_left.y + pong.field.size.y - pong.left_pad.rect.size.y;
+        }
+
+        let left_pad = &pong.left_pad;
+        set_position_and_size(
+            &left_pad_div,
+            left_pad.rect.top_left.x,
+            left_pad.rect.top_left.y,
+            left_pad.rect.size.x,
+            left_pad.rect.size.y,
+        );
+    }) as Box<dyn FnMut(_)>);
+
+    window
+        .add_event_listener_with_callback("mousemove", closure.as_ref().unchecked_ref())
+        .expect("should add mousemove event listener");
+    closure.forget(); // Prevent the closure from being dropped
 }
 
 pub fn set_position_and_size(element: &Element, x: f32, y: f32, width: f32, height: f32) {
@@ -84,7 +115,7 @@ pub fn set_position_and_size(element: &Element, x: f32, y: f32, width: f32, heig
         .set_attribute(
             "style",
             &format!(
-                "position: absolute; left: {}px; top: {}px; width: {}px; height: {}px;",
+                "left: {}px; top: {}px; width: {}px; height: {}px;",
                 x, y, width, height
             ),
         )
