@@ -3,25 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rust WebAssembly Project</title>
+    <title>Rust Web Assembly Pong</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Welcome to the Rust WebAssembly Project</h1>
-    <button id="wasm-button">Call Rust Function</button>
-    <div id="output"></div>
-
     <script type="module">
-        import init, { greet } from './pkg/rust_wasm_project.js';
-
-        async function run() {
+        import init, { start_pong } from './pkg/rust_wasm_project.js';
+        
+        (async function run() {
             await init();
-            document.getElementById('wasm-button').addEventListener('click', () => {
-                greet("Hello World!");
-            });
-        }
-
-        run();
+            start_pong();
+        })();
     </script>
 </body>
 </html>
