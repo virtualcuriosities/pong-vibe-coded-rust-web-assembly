@@ -9,7 +9,7 @@ use std::cell::RefCell;
 
 mod ball;
 
-use ball::{Ball, Pad, Pong};
+use ball::{Ball, Pad, Pong, Point};
 
 #[wasm_bindgen]
 extern {
@@ -108,6 +108,72 @@ pub fn add_ball_div() {
         .add_event_listener_with_callback("mousemove", closure.as_ref().unchecked_ref())
         .expect("should add mousemove event listener");
     closure.forget(); // Prevent the closure from being dropped
+
+    const FRAME_RATE_IN_MS: i32 = 50;
+    let pong_clone = Rc::clone(&pong);
+    let closure = Closure::wrap(Box::new(move || {
+        let mut pong = pong_clone.borrow_mut();
+        const DELTA: f32 = 1.0 / FRAME_RATE_IN_MS as f32;
+        let ball_speed = pong.ball.speed.clone();
+        pong.ball.rect.top_left += Point {
+            x: ball_speed.x * DELTA,
+            y: ball_speed.y * DELTA
+        };
+        
+        if pong.ball.speed.y < 0.0 {
+            if pong.ball.rect.top_left.y < 0.0{
+                pong.ball.rect.top_left.y = 0.0;
+                pong.ball.speed.y *= -1.0;
+            }
+        }
+
+        if pong.ball.speed.x < 0.0 {
+            if pong.ball.rect.top_left.x < 0.0 {
+                pong.ball.rect.top_left.x = 0.0;
+                pong.ball.speed.x *= -1.0;
+            }
+
+            if pong.ball.rect.top_left.y >= pong.left_pad.rect.top_left.y && pong.ball.rect.top_left.y + pong.ball.rect.size.y <= pong.left_pad.rect.top_left.y + pong.left_pad.rect.size.y {
+                if pong.ball.rect.top_left.x + pong.ball.rect.size.x >= pong.left_pad.rect.top_left.x && pong.ball.rect.top_left.x <= pong.left_pad.rect.top_left.x + pong.left_pad.rect.size.x {
+                    pong.ball.speed.x *= -1.0;
+                }
+            }
+        }
+
+        if pong.ball.speed.y > 0.0 {
+            if pong.ball.rect.top_left.y + pong.ball.rect.size.y > pong.field.size.y {
+                pong.ball.rect.top_left.y = pong.field.size.y - pong.ball.rect.size.y;
+                pong.ball.speed.y *= -1.0;
+            }
+        }
+        
+        if pong.ball.speed.x > 0.0 {
+            if pong.ball.rect.top_left.x + pong.ball.rect.size.x > pong.field.size.x {
+                pong.ball.rect.top_left.x = pong.field.size.x - pong.ball.rect.size.x;
+                pong.ball.speed.x *= -1.0;
+            }
+
+            if pong.ball.rect.top_left.y >= pong.right_pad.rect.top_left.y && pong.ball.rect.top_left.y + pong.ball.rect.size.y <= pong.right_pad.rect.top_left.y + pong.right_pad.rect.size.y {
+                if pong.ball.rect.top_left.x + pong.ball.rect.size.x >= pong.right_pad.rect.top_left.x && pong.ball.rect.top_left.x <= pong.right_pad.rect.top_left.x + pong.right_pad.rect.size.x {
+                    pong.ball.speed.x *= -1.0;
+                }
+            }
+        }
+
+        set_position_and_size(&ball_div, 
+            pong.ball.rect.top_left.x,
+            pong.ball.rect.top_left.y,
+            pong.ball.rect.size.x,
+            pong.ball.rect.size.y,
+        );
+    }) as Box<dyn Fn()>);
+    window
+    .set_interval_with_callback_and_timeout_and_arguments_0(
+        closure.as_ref().unchecked_ref(),
+        FRAME_RATE_IN_MS,
+    )
+    .expect("should register timeout");
+closure.forget(); // Prevent the closure from being dropped
 }
 
 pub fn set_position_and_size(element: &Element, x: f32, y: f32, width: f32, height: f32) {

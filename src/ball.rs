@@ -57,7 +57,7 @@ impl Pong {
                     top_left: Point { x: center.x - ball_size.x / 2.0, y: center.y - ball_size.y / 2.0},
                     size: ball_size,
                 },
-                speed: Point { x: 10.0, y: 10.0 },
+                speed: Point { x: -300.0, y: -300.0 },
             },
             left_pad: Pad {
                 rect: Rect {
