@@ -36,3 +36,27 @@ body {
     height: 0px;
     background-color: #fff;
 }
+
+.score, .speed_counter {
+    font: bold 30px monospace;
+    color: #fffa;
+    position: absolute;
+    top: 0;
+    margin: 10px;
+}
+
+.speed_counter {
+    text-align: center;
+    left: 0;
+    width: 100%;
+}
+
+.score.left {
+    text-align: left;
+    left: 0;
+}
+
+.score.right {
+    text-align: right;
+    right: 0;
+}   

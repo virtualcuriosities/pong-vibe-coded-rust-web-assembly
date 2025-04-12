@@ -6,11 +6,10 @@ use web_sys::HtmlElement;
 use web_sys::{window, Element, MouseEvent};
 use std::rc::Rc;
 use std::cell::RefCell;
-use std::u128::MIN;
 
 mod ball;
 
-use ball::{Ball, Pad, Pong, Point};
+use ball::{Pong, Point};
 
 #[wasm_bindgen]
 extern {
@@ -79,6 +78,22 @@ pub fn add_ball_div() {
         pong.borrow().right_pad.rect.size.y,
     );
 
+
+    let left_score_div = document.create_element("div").expect("should create a div");
+    left_score_div.set_class_name("score left");
+    field_div.append_child(&left_score_div).expect("should append the div");
+    left_score_div.set_text_content(Some("0"));
+
+    let right_score_div = document.create_element("div").expect("should create a div");
+    right_score_div.set_class_name("score right");
+    field_div.append_child(&right_score_div).expect("should append the div");
+    right_score_div.set_text_content(Some("0"));
+
+    let speed_counter_div = document.create_element("div").expect("should create a div");
+    speed_counter_div.set_class_name("speed_counter");
+    field_div.append_child(&speed_counter_div).expect("should append the div");
+    speed_counter_div.set_text_content(Some("0"));
+
     // Add mousemove event listener to update left pad position
     let pong_clone = Rc::clone(&pong);
     let closure = Closure::wrap(Box::new(move |event: MouseEvent| {
@@ -114,11 +129,14 @@ pub fn add_ball_div() {
     let pong_clone = Rc::clone(&pong);
     let closure = Closure::wrap(Box::new(move || {
         let mut pong = pong_clone.borrow_mut();
+        let mut scored = 0;
+
         const DELTA: f32 = 1.0 / FRAME_RATE_IN_MS as f32;
+        let speed_boost = 1.0 + pong.speed_counter as f32 / 5.0;
         let ball_speed = pong.ball.speed.clone();
         pong.ball.rect.top_left += Point {
-            x: ball_speed.x * DELTA,
-            y: ball_speed.y * DELTA
+            x: ball_speed.x * DELTA * speed_boost,
+            y: ball_speed.y * DELTA * speed_boost
         };
 
         // compute the right pad enemy AI
@@ -162,11 +180,13 @@ pub fn add_ball_div() {
             if pong.ball.rect.top_left.x < 0.0 {
                 pong.ball.rect.top_left.x = 0.0;
                 pong.ball.speed.x *= -1.0;
+                scored = -1;
             }
 
             if pong.ball.rect.top_left.y >= pong.left_pad.rect.top_left.y && pong.ball.rect.top_left.y + pong.ball.rect.size.y <= pong.left_pad.rect.top_left.y + pong.left_pad.rect.size.y {
                 if pong.ball.rect.top_left.x + pong.ball.rect.size.x >= pong.left_pad.rect.top_left.x && pong.ball.rect.top_left.x <= pong.left_pad.rect.top_left.x + pong.left_pad.rect.size.x {
                     pong.ball.speed.x *= -1.0;
+                    pong.speed_counter += 1;
                 }
             }
         }
@@ -182,11 +202,13 @@ pub fn add_ball_div() {
             if pong.ball.rect.top_left.x + pong.ball.rect.size.x > pong.field.size.x {
                 pong.ball.rect.top_left.x = pong.field.size.x - pong.ball.rect.size.x;
                 pong.ball.speed.x *= -1.0;
+                scored = 1;
             }
 
             if pong.ball.rect.top_left.y >= pong.right_pad.rect.top_left.y && pong.ball.rect.top_left.y + pong.ball.rect.size.y <= pong.right_pad.rect.top_left.y + pong.right_pad.rect.size.y {
                 if pong.ball.rect.top_left.x + pong.ball.rect.size.x >= pong.right_pad.rect.top_left.x && pong.ball.rect.top_left.x <= pong.right_pad.rect.top_left.x + pong.right_pad.rect.size.x {
                     pong.ball.speed.x *= -1.0;
+                    pong.speed_counter += 1;
                 }
             }
         }
@@ -197,7 +219,26 @@ pub fn add_ball_div() {
             pong.ball.rect.size.x,
             pong.ball.rect.size.y,
         );
+        
+        if scored != 0 {
+            if scored < 0 {
+                pong.left_score += 1;
+            } else {
+                pong.right_score += 1;
+            }
+            
+            // Reset the ball position
+            pong.ball.rect.top_left.x = pong.field.size.x / 2.0 - pong.ball.rect.size.x / 2.0;
+            pong.ball.rect.top_left.y = pong.field.size.y / 2.0 - pong.ball.rect.size.y / 2.0;
+            pong.ball.speed = Point { x: -300.0, y: -300.0 };
+            pong.left_pad.rect.top_left.y = pong.field.size.y / 2.0 - pong.left_pad.rect.size.y / 2.0;
+            pong.right_pad.rect.top_left.y = pong.field.size.y / 2.0 - pong.right_pad.rect.size.y / 2.0;
+            pong.speed_counter = 0;
+        }
 
+        left_score_div.set_text_content(Some(&pong.left_score.to_string()));
+        right_score_div.set_text_content(Some(&pong.right_score.to_string()));
+        speed_counter_div.set_text_content(Some(&pong.speed_counter.to_string()));
     }) as Box<dyn Fn()>);
     window
     .set_interval_with_callback_and_timeout_and_arguments_0(

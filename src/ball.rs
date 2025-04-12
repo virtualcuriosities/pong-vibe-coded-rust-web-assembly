@@ -37,6 +37,9 @@ pub struct Pong {
     pub ball: Ball,
     pub left_pad: Pad,
     pub right_pad: Pad,
+    pub left_score: u32,
+    pub right_score: u32,
+    pub speed_counter: u32,
 }
 
 impl Pong {
@@ -71,12 +74,9 @@ impl Pong {
                     size: pad_size.clone(),
                 },
             },
+            left_score: 0,
+            right_score: 0,
+            speed_counter: 0,
         }
-    }
-}
-
-impl Ball {
-    pub fn update_position(&mut self) {
-        self.rect.top_left += self.speed.clone(); // Clone speed to avoid moving it
     }
 }
