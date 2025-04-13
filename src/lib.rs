@@ -132,86 +132,126 @@ pub fn add_ball_div() {
         let mut scored = 0;
 
         const DELTA: f32 = 1.0 / FRAME_RATE_IN_MS as f32;
-        let speed_boost = 1.0 + pong.speed_counter as f32 / 5.0;
+        const AI_SPEED: f32 = 400.0;
+
+        let player_skill = pong.right_score as i32 - pong.left_score as i32;
+        let mut rubberbanded_ai_speed = AI_SPEED;
+        if player_skill > 0 {
+            rubberbanded_ai_speed *= 1.0 + 0.25 * player_skill as f32;
+        } else if player_skill < 0 {
+            rubberbanded_ai_speed /= 1.0 + 0.25 * player_skill as f32 * -1.0;
+        }
+
+        let mut speed_boost = 1.0 + pong.speed_counter as f32 / 5.0;
+        if player_skill > 0 {
+            speed_boost += (player_skill as f32 / 4.0).min(1.0);
+        }
         let ball_speed = pong.ball.speed.clone();
-        pong.ball.rect.top_left += Point {
-            x: ball_speed.x * DELTA * speed_boost,
-            y: ball_speed.y * DELTA * speed_boost
+        let speed = f32::sqrt(ball_speed.x * ball_speed.x + ball_speed.y * ball_speed.y);
+        let mut normalized = Point {
+            x: ball_speed.x / speed,
+            y: ball_speed.y / speed
         };
 
-        // compute the right pad enemy AI
-        const AI_SPEED: f32 = 500.0;
-
-        let pad_center = pong.right_pad.rect.top_left.y + pong.right_pad.rect.size.y / 2.0;
-        let ball_center = pong.ball.rect.top_left.y + pong.ball.rect.size.y / 2.0;
-        
-        if pad_center < ball_center {
-            pong.right_pad.rect.top_left.y += f32::min(AI_SPEED * DELTA, ball_center - pad_center);
-        } else {
-            pong.right_pad.rect.top_left.y -= f32::min(AI_SPEED * DELTA, pad_center - ball_center);
-        }
-        
-        // clamp the right pad position to the field
-        if pong.right_pad.rect.top_left.y < pong.field.top_left.y {
-            pong.right_pad.rect.top_left.y = pong.field.top_left.y;
-        }
-        
-        if pong.right_pad.rect.top_left.y > pong.field.top_left.y + pong.field.size.y - pong.right_pad.rect.size.y {
-            pong.right_pad.rect.top_left.y = pong.field.top_left.y + pong.field.size.y - pong.right_pad.rect.size.y;
-        }
-
-        set_position_and_size(
-            &right_pad_div,
-            pong.right_pad.rect.top_left.x,
-            pong.right_pad.rect.top_left.y,
-            pong.right_pad.rect.size.x,
-            pong.right_pad.rect.size.y,
-        );
-
-        // perform collision check
-        if pong.ball.speed.y < 0.0 {
-            if pong.ball.rect.top_left.y < 0.0{
-                pong.ball.rect.top_left.y = 0.0;
-                pong.ball.speed.y *= -1.0;
-            }
-        }
-
-        if pong.ball.speed.x < 0.0 {
-            if pong.ball.rect.top_left.x < 0.0 {
-                pong.ball.rect.top_left.x = 0.0;
-                pong.ball.speed.x *= -1.0;
-                scored = -1;
+        let mut i = 0;
+        while (i as f32) < speed {
+            let mut iteration = normalized.clone();
+            let mut iteration_ratio = 1.0;
+            if (i as f32 + 1.0) > speed  {
+                iteration_ratio = speed - i as f32;
+                iteration = Point { 
+                    x: iteration.x * iteration_ratio,
+                    y: iteration.y * iteration_ratio
+                };
             }
 
-            if pong.ball.rect.top_left.y >= pong.left_pad.rect.top_left.y && pong.ball.rect.top_left.y + pong.ball.rect.size.y <= pong.left_pad.rect.top_left.y + pong.left_pad.rect.size.y {
-                if pong.ball.rect.top_left.x + pong.ball.rect.size.x >= pong.left_pad.rect.top_left.x && pong.ball.rect.top_left.x <= pong.left_pad.rect.top_left.x + pong.left_pad.rect.size.x {
-                    pong.ball.speed.x *= -1.0;
-                    pong.speed_counter += 1;
+            pong.ball.rect.top_left += Point {
+                x: iteration.x * DELTA * speed_boost,
+                y: iteration.y * DELTA * speed_boost
+            };
+            
+            // compute the right pad enemy AI
+            let pad_center = pong.right_pad.rect.top_left.y + pong.right_pad.rect.size.y / 2.0;
+            let ball_center = pong.ball.rect.top_left.y + pong.ball.rect.size.y / 2.0;
+            
+            if pad_center < ball_center {
+                pong.right_pad.rect.top_left.y += f32::min(rubberbanded_ai_speed * DELTA * (iteration_ratio / speed), ball_center - pad_center);
+            } else {
+                pong.right_pad.rect.top_left.y -= f32::min(rubberbanded_ai_speed * DELTA * (iteration_ratio / speed), pad_center - ball_center);
+            }
+            
+            // clamp the right pad position to the field
+            if pong.right_pad.rect.top_left.y < pong.field.top_left.y {
+                pong.right_pad.rect.top_left.y = pong.field.top_left.y;
+            }
+            
+            if pong.right_pad.rect.top_left.y > pong.field.top_left.y + pong.field.size.y - pong.right_pad.rect.size.y {
+                pong.right_pad.rect.top_left.y = pong.field.top_left.y + pong.field.size.y - pong.right_pad.rect.size.y;
+            }
+
+            set_position_and_size(
+                &right_pad_div,
+                pong.right_pad.rect.top_left.x,
+                pong.right_pad.rect.top_left.y,
+                pong.right_pad.rect.size.x,
+                pong.right_pad.rect.size.y,
+            );
+
+            // perform collision check
+            if normalized.y < 0.0 {
+                if pong.ball.rect.top_left.y < 0.0{
+                    pong.ball.rect.top_left.y = 0.0;
+                    normalized.y *= -1.0;
                 }
             }
-        }
 
-        if pong.ball.speed.y > 0.0 {
-            if pong.ball.rect.top_left.y + pong.ball.rect.size.y > pong.field.size.y {
-                pong.ball.rect.top_left.y = pong.field.size.y - pong.ball.rect.size.y;
-                pong.ball.speed.y *= -1.0;
-            }
-        }
-        
-        if pong.ball.speed.x > 0.0 {
-            if pong.ball.rect.top_left.x + pong.ball.rect.size.x > pong.field.size.x {
-                pong.ball.rect.top_left.x = pong.field.size.x - pong.ball.rect.size.x;
-                pong.ball.speed.x *= -1.0;
-                scored = 1;
-            }
+            if normalized.x < 0.0 {
+                if pong.ball.rect.top_left.x < 0.0 {
+                    pong.ball.rect.top_left.x = 0.0;
+                    normalized.x *= -1.0;
+                    scored = -1;
+                }
 
-            if pong.ball.rect.top_left.y >= pong.right_pad.rect.top_left.y && pong.ball.rect.top_left.y + pong.ball.rect.size.y <= pong.right_pad.rect.top_left.y + pong.right_pad.rect.size.y {
-                if pong.ball.rect.top_left.x + pong.ball.rect.size.x >= pong.right_pad.rect.top_left.x && pong.ball.rect.top_left.x <= pong.right_pad.rect.top_left.x + pong.right_pad.rect.size.x {
-                    pong.ball.speed.x *= -1.0;
-                    pong.speed_counter += 1;
+                if pong.ball.rect.top_left.y >= pong.left_pad.rect.top_left.y && pong.ball.rect.top_left.y + pong.ball.rect.size.y <= pong.left_pad.rect.top_left.y + pong.left_pad.rect.size.y {
+                    if pong.ball.rect.top_left.x + pong.ball.rect.size.x >= pong.left_pad.rect.top_left.x && pong.ball.rect.top_left.x <= pong.left_pad.rect.top_left.x + pong.left_pad.rect.size.x {
+                        normalized.x *= -1.0;
+                        pong.speed_counter += 1;
+                    }
                 }
             }
+
+            if normalized.y > 0.0 {
+                if pong.ball.rect.top_left.y + pong.ball.rect.size.y > pong.field.size.y {
+                    pong.ball.rect.top_left.y = pong.field.size.y - pong.ball.rect.size.y;
+                    normalized.y *= -1.0;
+                }
+            }
+            
+            if normalized.x > 0.0 {
+                if pong.ball.rect.top_left.x + pong.ball.rect.size.x > pong.field.size.x {
+                    pong.ball.rect.top_left.x = pong.field.size.x - pong.ball.rect.size.x;
+                    normalized.x *= -1.0;
+                    scored = 1;
+                }
+
+                if pong.ball.rect.top_left.y >= pong.right_pad.rect.top_left.y && pong.ball.rect.top_left.y + pong.ball.rect.size.y <= pong.right_pad.rect.top_left.y + pong.right_pad.rect.size.y {
+                    if pong.ball.rect.top_left.x + pong.ball.rect.size.x >= pong.right_pad.rect.top_left.x && pong.ball.rect.top_left.x <= pong.right_pad.rect.top_left.x + pong.right_pad.rect.size.x {
+                        normalized.x *= -1.0;
+                        pong.speed_counter += 1;
+                    }
+                }
+
+                if scored != 0 {
+                    break;
+                }
+            }
+            i += 1;
         }
+
+        pong.ball.speed = Point {
+            x: f32::abs(pong.ball.speed.x) * f32::signum(normalized.x),
+            y: f32::abs(pong.ball.speed.y) * f32::signum(normalized.y)
+        };
 
         set_position_and_size(&ball_div, 
             pong.ball.rect.top_left.x,
@@ -230,7 +270,7 @@ pub fn add_ball_div() {
             // Reset the ball position
             pong.ball.rect.top_left.x = pong.field.size.x / 2.0 - pong.ball.rect.size.x / 2.0;
             pong.ball.rect.top_left.y = pong.field.size.y / 2.0 - pong.ball.rect.size.y / 2.0;
-            pong.ball.speed = Point { x: -300.0, y: -300.0 };
+            pong.ball.speed = Point { x: 300.0, y: -300.0 };
             pong.left_pad.rect.top_left.y = pong.field.size.y / 2.0 - pong.left_pad.rect.size.y / 2.0;
             pong.right_pad.rect.top_left.y = pong.field.size.y / 2.0 - pong.right_pad.rect.size.y / 2.0;
             pong.speed_counter = 0;
