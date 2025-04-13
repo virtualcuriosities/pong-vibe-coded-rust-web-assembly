@@ -1,59 +1,42 @@
-# Rust WebAssembly Project
+# Pong (Web Assembly), Vibe-coded in Rust with Copilot
 
-This project is a simple Rust application compiled to WebAssembly (Wasm) that can be run in a web browser. It includes a static HTML page that interacts with the Rust code.
+This project is a simple Pong game made in Rust / Web Assembly by someone who doesn't know Rust or Web Assembly using Copilot.
+
+See https://www.virtualcuriosities.com/articles/4935/coding-with-ai-for-the-first-time for the blog post.
 
 ## Project Structure
 
 ```
 rust-wasm-project
+├── ,vscode
+│   └── tasks.json      # VS Code tasks configuration.
 ├── src
-│   └── lib.rs          # Rust code compiled to WebAssembly
+│   ├── lib.rs          # Main Rust code.
+│   └── ball.rs         # Classes.
+├── pkg                 # Generated after building
+├── target              # Generated after building
 ├── static
 │   ├── index.html      # Main HTML page
-│   └── style.css       # Styles for the HTML page
+│   ├── style.css       # Styles for the HTML page
+│   └── pkg             # symlink to ../pkg
 ├── Cargo.toml          # Rust project configuration
 ├── README.md           # Project documentation
 └── .gitignore          # Git ignore file
 ```
 
-## Getting Started
+### Building and Running the Project
 
-### Prerequisites
+Use the "Build Rust WebAssembly" task to compile Rust to web assembly (to pkg/)
 
-- Rust and Cargo installed on your machine.
-- `wasm-pack` installed. You can install it using the following command:
+Use the "Serve Static Files" task to run a Python3 server on static/ for locahost:8080.
 
-```bash
-cargo install wasm-pack
-```
+There should be a symlink on static/pkg -> pkg. If your operating system or git client doesn't support symlinks, copy the pkg folder to inside the static folder.
 
-### Building the Project
-
-To build the project and generate the WebAssembly package, run:
-
-```bash
-wasm-pack build --target web
-```
-
-### Running the Project
-
-You can serve the static files using a simple HTTP server. One option is to use `basic-http-server`, which can be installed via Cargo:
-
-```bash
-cargo install basic-http-server
-```
-
-Then, navigate to the `static` directory and run:
-
-```bash
-basic-http-server .
-```
-
-Open your web browser and go to `http://localhost:4000` to see the application in action.
+Access localhost:8080 on your web browser after building to play the pong.
 
 ## Contributing
 
-Feel free to submit issues or pull requests if you have suggestions or improvements for the project.
+This project was published for educational purposes only and will not be updated. You are free to fork and learn from it, however.
 
 ## License
 
