@@ -1,8 +1,10 @@
-# Pong (Web Assembly), Vibe-coded in Rust with Copilot
+# Pong (Web Assembly), Vibe-coded in Rust with Copilot (Cleaned Version)
 
-This project is a simple Pong game made in Rust / Web Assembly by someone who doesn't know Rust or Web Assembly using Copilot.
+This project is a simple Pong game made in Rust / Web Assembly by someone who doesn't know Rust or Web Assembly using Copilot, that was then cleaned a bit by learning some Rust.
 
 See https://www.virtualcuriosities.com/articles/4935/coding-with-ai-for-the-first-time for the blog post.
+
+See https://www.virtualcuriosities.com/articles/4975/fixing-copilots-code-by-learning-rust for the other blog post.
 
 ## Project Structure
 
@@ -10,9 +12,7 @@ See https://www.virtualcuriosities.com/articles/4935/coding-with-ai-for-the-firs
 rust-wasm-project
 ├── ,vscode
 │   └── tasks.json      # VS Code tasks configuration.
-├── src
-│   ├── lib.rs          # Main Rust code.
-│   └── ball.rs         # Classes.
+├── src                 # Rust code
 ├── pkg                 # Generated after building
 ├── target              # Generated after building
 ├── static
